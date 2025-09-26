@@ -1,0 +1,140 @@
+// Prisma schema for CarFixParts using PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  shopkeeper
+  customer
+}
+
+enum Status {
+  pending
+  approved
+  rejected
+}
+
+enum Condition {
+  new
+  used
+  refurbished
+}
+
+enum Availability {
+  available
+  sold
+  reserved
+}
+
+model User {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  password    String
+  phone       String
+  role        Role
+  status      Status   @default(approved)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  shopkeeperProfile ShopkeeperProfile?
+  parts             Part[]
+}
+
+model ShopkeeperProfile {
+  id        String @id @default(uuid())
+  userId    String @unique
+  shopName  String
+  address   String
+  city      String
+  state     String
+  pincode   String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CarCompany {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  logo      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  models CarModel[]
+  parts  Part[]
+}
+
+model CarModel {
+  id        String   @id @default(uuid())
+  name      String
+  year      Int
+  variant   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  companyId String
+  company   CarCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  parts Part[]
+
+  @@index([companyId, name, year])
+}
+
+model PartCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  description String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  parts Part[]
+}
+
+model Part {
+  id           String       @id @default(uuid())
+  name         String
+  description  String?
+  sellingPrice Float
+  purchasedPrice Float?
+  condition    Condition
+  availability Availability @default(available)
+  warranty     String?
+
+  carCompanyId String
+  carModelId   String
+  categoryId   String
+  shopkeeperId String
+
+  locationCity   String?
+  locationState  String?
+  locationPincode String?
+
+  contactPhone String?
+  contactEmail String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  carCompany CarCompany  @relation(fields: [carCompanyId], references: [id], onDelete: Restrict)
+  carModel   CarModel    @relation(fields: [carModelId], references: [id], onDelete: Restrict)
+  category   PartCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  shopkeeper User        @relation(fields: [shopkeeperId], references: [id], onDelete: Cascade)
+  images     PartImage[]
+
+  @@index([carCompanyId, carModelId, categoryId])
+  @@index([shopkeeperId])
+}
+
+model PartImage {
+  id     String @id @default(uuid())
+  url    String
+  partId String
+  part   Part   @relation(fields: [partId], references: [id], onDelete: Cascade)
+}
